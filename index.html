@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FitTrack">
+    <title>FitTrack</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        :root{
+            --primary:#6C63FF;--primary-dark:#5A52D5;--primary-light:#8B85FF;
+            --secondary:#FF6B6B;--success:#4ECB71;--warning:#FFB84D;
+            --bg:#0F0F1A;--bg-card:#1A1A2E;--bg-card-2:#222240;--bg-input:#2A2A4A;
+            --text:#FFFFFF;--text-secondary:#A0A0C0;--text-muted:#6060A0;--border:#333360;
+            --safe-top:env(safe-area-inset-top,44px);--safe-bottom:env(safe-area-inset-bottom,20px)
+        }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+            background:var(--bg);color:var(--text);min-height:100vh;
+            min-height:-webkit-fill-available;overflow-x:hidden}
+        html{height:-webkit-fill-available}
+        .screen{display:none;min-height:100vh;padding-bottom:calc(var(--safe-bottom)+100px);
+            animation:fadeIn .3s ease}
+        .screen.active{display:block}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes checkmark{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+        .safe-top-spacer{height:calc(var(--safe-top) + 16px);width:100%;flex-shrink:0}
+        .header{display:flex;justify-content:space-between;align-items:center;padding:10px 20px 15px}
+        .header h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--primary-light),var(--secondary));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .header-actions{display:flex;gap:8px}
+        .header-btn{background:var(--bg-card-2);border:1px solid var(--border);color:var(--text);
+            width:42px;height:42px;border-radius:14px;display:flex;align-items:center;
+            justify-content:center;font-size:18px;cursor:pointer;transition:all .2s}
+        .header-btn:active{transform:scale(.92);background:var(--primary)}
+        .home-greeting{padding:20px 25px;margin-bottom:10px}
+        .home-greeting .date{font-size:14px;color:var(--text-secondary);margin-bottom:5px}
+        .home-greeting h2{font-size:24px;font-weight:700}
+        .home-cards{padding:0 20px;display:flex;flex-direction:column;gap:16px}
+        .home-card{background:var(--bg-card);border:1px solid var(--border);border-radius:24px;
+            padding:28px 24px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+        .home-card:active{transform:scale(.97)}
+        .home-card::before{content:'';position:absolute;top:0;right:0;width:120px;height:120px;
+            border-radius:50%;opacity:.1;transform:translate(30px,-30px)}
+        .home-card.workout::before{background:var(--primary)}
+        .home-card.meals::before{background:var(--secondary)}
+        .home-card.history::before{background:var(--warning)}
+        .home-card .card-icon{font-size:48px;margin-bottom:16px;display:block}
+        .home-card .card-title{font-size:22px;font-weight:700;margin-bottom:6px}
+        .home-card .card-subtitle{font-size:14px;color:var(--text-secondary)}
+        .home-card .card-progress{margin-top:16px;display:flex;align-items:center;gap:12px}
+        .progress-bar{flex:1;height:8px;background:var(--bg-input);border-radius:10px;overflow:hidden}
+        .progress-bar .fill{height:100%;border-radius:10px;transition:width .5s ease}
+        .home-card.workout .fill{background:linear-gradient(90deg,var(--primary),var(--primary-light))}
+        .home-card.meals .fill{background:linear-gradient(90deg,var(--secondary),#FF9B9B)}
+        .progress-text{font-size:13px;color:var(--text-secondary);min-width:40px;text-align:left}
+    </style>
+    <style>
+        .day-indicator{text-align:center;padding:10px 20px 20px}
+        .day-indicator .day-name{font-size:20px;font-weight:700;color:var(--primary-light)}
+        .exercise-list{padding:0 20px;display:flex;flex-direction:column;gap:12px}
+        .exercise-card{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:20px;padding:18px 20px;animation:slideUp .3s ease both}
+        .exercise-card:nth-child(1){animation-delay:.05s}
+        .exercise-card:nth-child(2){animation-delay:.1s}
+        .exercise-card:nth-child(3){animation-delay:.15s}
+        .exercise-card:nth-child(4){animation-delay:.2s}
+        .exercise-card:nth-child(5){animation-delay:.25s}
+        .exercise-card:nth-child(6){animation-delay:.3s}
+        .exercise-card:nth-child(7){animation-delay:.35s}
+        .exercise-card:nth-child(8){animation-delay:.4s}
+        .exercise-card:nth-child(9){animation-delay:.45s}
+        .exercise-card:nth-child(10){animation-delay:.5s}
+        .exercise-card:nth-child(11){animation-delay:.55s}
+        .exercise-card:nth-child(12){animation-delay:.6s}
+        .exercise-header{display:flex;justify-content:space-between;
+            align-items:flex-start;margin-bottom:4px}
+        .exercise-name{font-size:17px;font-weight:600;flex:1}
+        .exercise-weight{font-size:13px;color:var(--warning);font-weight:600;
+            background:rgba(255,184,77,.12);padding:4px 10px;border-radius:8px;
+            white-space:nowrap;margin-right:8px}
+        .exercise-info{font-size:13px;color:var(--text-muted);margin-bottom:12px}
+        .exercise-sets{display:flex;flex-wrap:wrap;gap:8px}
+        .set-btn{width:48px;height:48px;border-radius:14px;border:2px solid var(--border);
+            background:var(--bg-input);color:var(--text);font-size:15px;font-weight:600;
+            cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+        .set-btn:active{transform:scale(.9)}
+        .set-btn.done{background:var(--success);border-color:var(--success);
+            color:#fff;animation:checkmark .3s ease}
+        .set-btn.done::after{content:'✓';font-size:18px}
+        .set-btn.done span{display:none}
+        .exercise-card.all-done{border-color:var(--success);background:rgba(78,203,113,.08)}
+        .exercise-card.all-done .exercise-name{color:var(--success)}
+        .cardio-card{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:20px;padding:18px 20px;animation:slideUp .3s ease both}
+        .cardio-header{display:flex;justify-content:space-between;
+            align-items:center;margin-bottom:12px}
+        .cardio-name{font-size:17px;font-weight:600;flex:1}
+        .cardio-duration{font-size:13px;color:var(--primary-light);font-weight:600;
+            background:rgba(108,99,255,.12);padding:4px 10px;border-radius:8px}
+        .cardio-toggle{width:100%;padding:14px;border-radius:14px;
+            border:2px solid var(--border);background:var(--bg-input);color:var(--text);
+            font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
+        .cardio-toggle:active{transform:scale(.97)}
+        .cardio-toggle.done{background:var(--success);border-color:var(--success);color:#fff}
+        .cardio-card.all-done{border-color:var(--success);background:rgba(78,203,113,.08)}
+        .cardio-card.all-done .cardio-name{color:var(--success)}
+        .meal-section{padding:0 20px;margin-bottom:16px}
+        .meal-section-title{font-size:13px;font-weight:700;text-transform:uppercase;
+            letter-spacing:1px;color:var(--text-muted);padding:8px 4px}
+        .meal-items{display:flex;flex-direction:column;gap:8px}
+        .meal-item{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:16px;padding:16px 20px;display:flex;align-items:center;
+            gap:14px;cursor:pointer;transition:all .2s;animation:slideUp .3s ease both}
+        .meal-item:active{transform:scale(.98)}
+        .meal-checkbox{width:28px;height:28px;border-radius:50%;
+            border:2px solid var(--border);display:flex;align-items:center;
+            justify-content:center;flex-shrink:0;transition:all .2s}
+        .meal-item.done .meal-checkbox{background:var(--success);border-color:var(--success)}
+        .meal-item.done .meal-checkbox::after{content:'✓';color:#fff;font-size:14px;font-weight:700}
+        .meal-text{font-size:16px;transition:all .2s;flex:1}
+        .meal-time{font-size:12px;color:var(--text-muted);font-weight:600;white-space:nowrap}
+        .meal-item.done .meal-text{color:var(--text-muted);
+            text-decoration:line-through;text-decoration-thickness:2px}
+    </style>
+    <style>
+        .edit-container{padding:0 20px}
+        .day-tabs{display:flex;gap:6px;padding:0 20px 16px;overflow-x:auto;
+            -webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .day-tabs::-webkit-scrollbar{display:none}
+        .day-tab{padding:10px 16px;border-radius:12px;background:var(--bg-card);
+            border:1px solid var(--border);color:var(--text-secondary);font-size:14px;
+            font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+        .day-tab:active{transform:scale(.95)}
+        .day-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
+        .edit-item{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;
+            padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .edit-item input[type="text"]{flex:1;min-width:120px;background:none;border:none;
+            color:var(--text);font-size:15px;font-family:inherit;outline:none}
+        .edit-item input::placeholder{color:var(--text-muted)}
+        .small-input{width:50px;text-align:center;background:var(--bg-input);
+            border:1px solid var(--border);border-radius:10px;padding:8px 4px;
+            color:var(--text);font-size:14px;font-family:inherit;outline:none}
+        .weight-input{width:65px;text-align:center;background:var(--bg-input);
+            border:1px solid var(--border);border-radius:10px;padding:8px 4px;
+            color:var(--warning);font-size:14px;font-family:inherit;outline:none}
+        .input-label{font-size:11px;color:var(--text-muted);font-weight:600}
+        .delete-btn{width:36px;height:36px;border-radius:10px;
+            background:rgba(255,107,107,.15);border:none;color:var(--secondary);
+            font-size:16px;cursor:pointer;display:flex;align-items:center;
+            justify-content:center;flex-shrink:0}
+        .delete-btn:active{background:var(--secondary);color:#fff}
+        .add-btn{width:100%;padding:14px;border-radius:16px;border:2px dashed var(--border);
+            background:none;color:var(--text-secondary);font-size:15px;
+            font-family:inherit;cursor:pointer;transition:all .2s;margin-top:4px}
+        .add-btn:active{border-color:var(--primary);color:var(--primary);
+            background:rgba(108,99,255,.08)}
+        .save-btn{width:calc(100% - 40px);margin:24px 20px;padding:16px;border-radius:16px;
+            border:none;background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+            color:#fff;font-size:17px;font-weight:700;font-family:inherit;
+            cursor:pointer;transition:all .2s}
+        .save-btn:active{transform:scale(.97);opacity:.9}
+        .meal-type-header{font-size:16px;font-weight:700;color:var(--primary-light);margin:16px 0 8px}
+        .meal-type-header:first-child{margin-top:0}
+        .meal-edit-item{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:16px;padding:14px 16px;margin-bottom:8px;display:flex;
+            align-items:center;gap:12px}
+        .meal-edit-item input{flex:1;background:none;border:none;color:var(--text);
+            font-size:16px;font-family:inherit;outline:none}
+        .meal-edit-item input::placeholder{color:var(--text-muted)}
+        .time-input{width:70px;text-align:center;background:var(--bg-input);
+            border:1px solid var(--border);border-radius:10px;padding:8px 4px;
+            color:var(--primary-light);font-size:14px;font-family:inherit;outline:none}
+        .rest-day{text-align:center;padding:60px 40px}
+        .rest-day .rest-icon{font-size:72px;margin-bottom:16px;display:block}
+        .rest-day h3{font-size:22px;margin-bottom:8px}
+        .rest-day p{color:var(--text-secondary);font-size:15px}
+        .toast{position:fixed;bottom:calc(var(--safe-bottom)+30px);left:50%;
+            transform:translateX(-50%) translateY(100px);background:var(--bg-card-2);
+            border:1px solid var(--border);color:var(--text);padding:14px 28px;
+            border-radius:16px;font-size:15px;font-weight:600;z-index:1000;
+            transition:transform .3s ease;white-space:nowrap}
+        .toast.show{transform:translateX(-50%) translateY(0)}
+        .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+            background:rgba(0,0,0,.6);z-index:999;justify-content:center;
+            align-items:center;padding:20px}
+        .modal-overlay.show{display:flex}
+        .modal{background:var(--bg-card);border:1px solid var(--border);border-radius:24px;
+            padding:28px 24px;max-width:320px;width:100%;text-align:center}
+        .modal h3{font-size:20px;margin-bottom:10px}
+        .modal p{color:var(--text-secondary);font-size:15px;margin-bottom:24px}
+        .modal-buttons{display:flex;gap:10px}
+        .modal-btn{flex:1;padding:14px;border-radius:14px;border:none;font-size:15px;
+            font-weight:600;font-family:inherit;cursor:pointer}
+        .modal-btn.cancel{background:var(--bg-input);color:var(--text)}
+        .modal-btn.confirm{background:var(--secondary);color:#fff}
+        .reset-section{padding:30px 20px 10px;text-align:center}
+        .reset-btn{padding:10px 20px;border-radius:12px;border:1px solid var(--border);
+            background:var(--bg-card);color:var(--text-secondary);font-size:13px;
+            font-family:inherit;cursor:pointer}
+        .reset-btn:active{background:var(--secondary);color:#fff;border-color:var(--secondary)}
+        /* Calendar */
+        .cal-header{display:flex;align-items:center;justify-content:center;
+            gap:16px;padding:0 20px 12px}
+        .cal-header button{background:var(--bg-card-2);border:1px solid var(--border);
+            color:var(--text);width:38px;height:38px;border-radius:12px;display:flex;
+            align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+        .cal-header button:active{background:var(--primary)}
+        .cal-month-text{font-size:17px;font-weight:700;min-width:140px;text-align:center}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+            padding:0 16px 16px;direction:rtl}
+        .cal-day-name{text-align:center;font-size:12px;color:var(--text-muted);
+            font-weight:600;padding:6px 0}
+        .cal-day{text-align:center;padding:10px 0;border-radius:12px;font-size:14px;
+            font-weight:600;cursor:pointer;transition:all .2s;position:relative}
+        .cal-day:active{transform:scale(.9)}
+        .cal-day.empty{cursor:default}
+        .cal-day.today{border:2px solid var(--primary)}
+        .cal-day.selected{background:var(--primary);color:#fff}
+        .cal-day.has-data::after{content:'';position:absolute;bottom:3px;left:50%;
+            transform:translateX(-50%);width:6px;height:6px;border-radius:50%;
+            background:var(--success)}
+        .cal-day.future{color:var(--text-muted);opacity:.4;cursor:default}
+        .history-detail{padding:0 20px;margin-top:8px}
+        .history-section{margin-bottom:20px}
+        .history-section-title{font-size:15px;font-weight:700;color:var(--primary-light);
+            margin-bottom:10px;display:flex;align-items:center;gap:8px}
+        .history-item{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:14px;padding:14px 16px;margin-bottom:6px;display:flex;
+            justify-content:space-between;align-items:center}
+        .history-item-name{font-size:15px;font-weight:500}
+        .history-item-status{font-size:13px;font-weight:600;padding:4px 10px;border-radius:8px}
+        .history-item-status.complete{color:var(--success);background:rgba(78,203,113,.12)}
+        .history-item-status.partial{color:var(--warning);background:rgba(255,184,77,.12)}
+        .history-item-status.none{color:var(--text-muted);background:var(--bg-input)}
+        .history-empty{text-align:center;padding:30px;color:var(--text-muted)}
+        .history-summary{background:var(--bg-card);border:1px solid var(--border);
+            border-radius:20px;padding:20px;margin:0 20px 16px;display:flex;
+            justify-content:space-around;text-align:center}
+        .summary-item .summary-value{font-size:28px;font-weight:800}
+        .summary-item .summary-label{font-size:12px;color:var(--text-muted);margin-top:4px}
+        .summary-workout .summary-value{color:var(--primary-light)}
+        .summary-meals .summary-value{color:var(--secondary)}
+        .summary-total .summary-value{color:var(--success)}
+        .selected-date-title{text-align:center;padding:8px 20px 12px;
+            font-size:15px;color:var(--text-secondary)}
+    </style>
+</head>
+<body>
+<!-- HOME -->
+<div id="homeScreen" class="screen active">
+    <div class="safe-top-spacer"></div>
+    <div class="header"><h1>💪 FitTrack</h1></div>
+    <div class="home-greeting">
+        <div class="date" id="homeDate"></div>
+        <h2 id="homeGreeting">בוקר טוב! 👋</h2>
+    </div>
+    <div class="home-cards">
+        <div class="home-card workout" onclick="showScreen('workout')">
+            <span class="card-icon">🏋️</span>
+            <div class="card-title">תוכנית אימון</div>
+            <div class="card-subtitle" id="workoutSubtitle">לחץ לראות את האימון</div>
+            <div class="card-progress">
+                <div class="progress-bar"><div class="fill" id="workoutProgress" style="width:0%"></div></div>
+                <span class="progress-text" id="workoutProgressText">0%</span>
+            </div>
+        </div>
+        <div class="home-card meals" onclick="showScreen('meals')">
+            <span class="card-icon">🥗</span>
+            <div class="card-title">תפריט ארוחות</div>
+            <div class="card-subtitle" id="mealsSubtitle">לחץ לראות את הארוחות</div>
+            <div class="card-progress">
+                <div class="progress-bar"><div class="fill" id="mealsProgress" style="width:0%"></div></div>
+                <span class="progress-text" id="mealsProgressText">0%</span>
+            </div>
+        </div>
+        <div class="home-card history" onclick="showScreen('history')">
+            <span class="card-icon">📊</span>
+            <div class="card-title">היסטוריה</div>
+            <div class="card-subtitle">צפה במה שביצעת בימים קודמים</div>
+        </div>
+    </div>
+</div>
+
+<!-- WORKOUT -->
+<div id="workoutScreen" class="screen">
+    <div class="safe-top-spacer"></div>
+    <div class="header">
+        <h1>🏋️ אימון</h1>
+        <div class="header-actions">
+            <button class="header-btn" onclick="showScreen('editWorkout')">✏️</button>
+            <button class="header-btn" onclick="showScreen('home')">🏠</button>
+        </div>
+    </div>
+    <div class="day-indicator"><div class="day-name" id="workoutDayName"></div></div>
+    <div id="exerciseList" class="exercise-list"></div>
+    <div class="reset-section">
+        <button class="reset-btn" onclick="confirmReset('workout')">🔄 אפס סימונים</button>
+    </div>
+</div>
+
+<!-- MEALS -->
+<div id="mealsScreen" class="screen">
+    <div class="safe-top-spacer"></div>
+    <div class="header">
+        <h1>🥗 ארוחות</h1>
+        <div class="header-actions">
+            <button class="header-btn" onclick="showScreen('editMeals')">✏️</button>
+            <button class="header-btn" onclick="showScreen('home')">🏠</button>
+        </div>
+    </div>
+    <div id="mealsList"></div>
+    <div class="reset-section">
+        <button class="reset-btn" onclick="confirmReset('meals')">🔄 אפס סימונים</button>
+    </div>
+</div>
+
+<!-- HISTORY -->
+<div id="historyScreen" class="screen">
+    <div class="safe-top-spacer"></div>
+    <div class="header">
+        <h1>📊 היסטוריה</h1>
+        <div class="header-actions">
+            <button class="header-btn" onclick="showScreen('home')">🏠</button>
+        </div>
+    </div>
+    <div class="cal-header">
+        <button onclick="changeCalMonth(1)">▶</button>
+        <div class="cal-month-text" id="calMonthText"></div>
+        <button onclick="changeCalMonth(-1)">◀</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div id="historySummary" class="history-summary" style="display:none"></div>
+    <div class="selected-date-title" id="selectedDateTitle"></div>
+    <div class="history-detail" id="historyContent"></div>
+</div>
+
+<!-- EDIT WORKOUT -->
+<div id="editWorkoutScreen" class="screen">
+    <div class="safe-top-spacer"></div>
+    <div class="header">
+        <h1>✏️ עריכת אימונים</h1>
+        <div class="header-actions">
+            <button class="header-btn" onclick="showScreen('workout')">✕</button>
+        </div>
+    </div>
+    <div class="day-tabs" id="editWorkoutTabs"></div>
+    <div class="edit-container" id="editWorkoutContainer"></div>
+    <button class="add-btn" style="margin:4px 20px;width:calc(100% - 40px)"
+        onclick="addExerciseField()">+ הוסף תרגיל</button>
+    <button class="save-btn" onclick="saveWorkoutPlan()">💾 שמור תוכנית</button>
+</div>
+
+<!-- EDIT MEALS -->
+<div id="editMealsScreen" class="screen">
+    <div class="safe-top-spacer"></div>
+    <div class="header">
+        <h1>✏️ עריכת ארוחות</h1>
+        <div class="header-actions">
+            <button class="header-btn" onclick="showScreen('meals')">✕</button>
+        </div>
+    </div>
+    <div class="edit-container" id="editMealsContainer"></div>
+    <button class="save-btn" onclick="saveMealsPlan()">💾 שמור תפריט</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+        <h3>🔄 איפוס סימונים</h3>
+        <p>בטוח שאתה רוצה לאפס את כל הסימונים של היום?</p>
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" onclick="closeModal()">ביטול</button>
+            <button class="modal-btn confirm" id="confirmResetBtn">אפס</button>
+        </div>
+    </div>
+</div>
+<script>
+const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const MEAL_TYPES=[
+    {key:'breakfast',name:'ארוחת בוקר',icon:'🌅'},
+    {key:'breakfast2',name:'ארוחת בוקר 2',icon:'☀️'},
+    {key:'lunch',name:'ארוחת צהריים',icon:'🍽️'},
+    {key:'snack',name:'ארוחת ביניים',icon:'🥜'},
+    {key:'dinner',name:'ארוחת ערב',icon:'🌙'}
+];
+
+const DEFAULT_WORKOUT={
+    0:[
+        {name:'לחיצת חזה במכונה',sets:4,reps:'10',type:'exercise',weight:''},
+        {name:'לחיצת חזה בשיפוע עם דאמבלים',sets:3,reps:'10',type:'exercise',weight:''},
+        {name:'פרפר חזה במכונה',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'לחיצת כתפיים במכונה',sets:4,reps:'10',type:'exercise',weight:''},
+        {name:'הרחקת כתפיים לצדדים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'פשיטת מרפקים בכבל',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'פשיטת יד מעל הראש עם חבל / פשיטת מרפקים במכונה',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'הליכה בשיפוע',sets:1,reps:'10 דקות',type:'cardio',weight:''},
+        {name:'פלאנק',sets:3,reps:'45-60 שניות',type:'exercise',weight:''},
+        {name:'הרמות ברכיים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפות בטן',sets:3,reps:'20',type:'exercise',weight:''},
+        {name:'בטן אופניים',sets:3,reps:'20',type:'exercise',weight:''}
+    ],
+    1:[
+        {name:'משיכת פולי עליון',sets:4,reps:'10',type:'exercise',weight:''},
+        {name:'חתירה בישיבה בכבל',sets:4,reps:'10',type:'exercise',weight:''},
+        {name:'חתירה עם דאמבל יד אחת',sets:3,reps:'12 לכל צד',type:'exercise',weight:''},
+        {name:'משיכת חבל לפנים (Face Pull)',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפת מרפקים עם מוט EZ',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'כפיפת פטישים עם דאמבלים',sets:3,reps:'12',type:'exercise',weight:''}
+    ],
+    2:[
+        {name:'לחיצת רגליים במכונה',sets:4,reps:'12',type:'exercise',weight:''},
+        {name:'כפיפת ברכיים במכונה',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'פשיטת ברכיים במכונה',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'מכרעים בהליכה',sets:3,reps:'12 לכל רגל',type:'exercise',weight:''},
+        {name:'הרמות תאומים',sets:4,reps:'15',type:'exercise',weight:''},
+        {name:'הליכה בשיפוע (שיפוע 8-12)',sets:1,reps:'20 דקות',type:'cardio',weight:''},
+        {name:'פלאנק',sets:3,reps:'45-60 שניות',type:'exercise',weight:''},
+        {name:'הרמות ברכיים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפות בטן',sets:3,reps:'20',type:'exercise',weight:''},
+        {name:'בטן אופניים',sets:3,reps:'20',type:'exercise',weight:''}
+    ],
+    3:[
+        {name:'ריצה קלה',sets:1,reps:'40 דקות',type:'cardio',weight:''}
+    ],
+    4:[
+        {name:'לחיצת חזה בשיפוע',sets:4,reps:'8',type:'exercise',weight:''},
+        {name:'משיכת פולי עליון / מתח',sets:4,reps:'10',type:'exercise',weight:''},
+        {name:'חתירה בישיבה בכבל',sets:3,reps:'10',type:'exercise',weight:''},
+        {name:'לחיצת כתפיים',sets:3,reps:'10',type:'exercise',weight:''},
+        {name:'הרחקת כתפיים לצדדים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפת מרפקים בכבל',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'פשיטת מרפקים עם חבל',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'אירובי קל',sets:1,reps:'10-15 דקות',type:'cardio',weight:''},
+        {name:'פלאנק',sets:3,reps:'45-60 שניות',type:'exercise',weight:''},
+        {name:'הרמות ברכיים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפות בטן',sets:3,reps:'20',type:'exercise',weight:''},
+        {name:'בטן אופניים',sets:3,reps:'20',type:'exercise',weight:''}
+    ],
+    5:[
+        {name:'מתח',sets:3,reps:'עד כשל',type:'exercise',weight:''},
+        {name:'מקבילים',sets:3,reps:'עד כשל',type:'exercise',weight:''},
+        {name:'שכיבות שמיכה',sets:3,reps:'20',type:'exercise',weight:''},
+        {name:'סקוואטים עם משקל גוף',sets:3,reps:'20',type:'exercise',weight:''},
+        {name:'הרחקת כתפיים לצדדים עם דאמבלים',sets:3,reps:'15',type:'exercise',weight:''},
+        {name:'כפיפת פטישים עם דאמבלים',sets:3,reps:'12',type:'exercise',weight:''},
+        {name:'לחיצת כתפיים עם דאמבלים',sets:3,reps:'12',type:'exercise',weight:''}
+    ],
+    6:[]
+};
+
+const DEFAULT_MEALS={
+    'breakfast':[{text:'שייק + קריאטין',time:'06:00'}],
+    'breakfast2':[{text:'סנדוויץ׳',time:'07:30'}],
+    'lunch':[{text:'חזה עוף, אורז, סלט, מרק',time:'11:30'}],
+    'snack':[{text:'יוגורט וגרנולה',time:'15:30'}],
+    'dinner':[{text:'אורז וחזה עוף / שווארמה / פסטה בולונז / לזניה / פיצה',time:'19:30'}]
+};
+function getToday(){return new Date().getDay()}
+function getTodayKey(){return new Date().toISOString().split('T')[0]}
+function getDayName(i){return DAYS[i]}
+function loadData(k,f){try{const d=localStorage.getItem(k);return d?JSON.parse(d):f}catch{return f}}
+function saveData(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function getWorkoutPlan(){const p=loadData('wp4',null);if(!p){setWorkoutPlan(DEFAULT_WORKOUT);return DEFAULT_WORKOUT}return p}
+function setWorkoutPlan(p){saveData('wp4',p)}
+function getMealsPlan(){const p=loadData('mp4',null);if(!p){setMealsPlan(DEFAULT_MEALS);return DEFAULT_MEALS}return p}
+function setMealsPlan(p){saveData('mp4',p)}
+function getWorkoutDone(){return loadData('wd4',{})}
+function setWorkoutDone(d){saveData('wd4',d)}
+function getMealsDone(){return loadData('md4',{})}
+function setMealsDone(d){saveData('md4',d)}
+
+function showScreen(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(name+'Screen').classList.add('active');
+    window.scrollTo(0,0);
+    if(name==='home')renderHome();
+    else if(name==='workout')renderWorkout();
+    else if(name==='meals')renderMeals();
+    else if(name==='editWorkout')renderEditWorkout();
+    else if(name==='editMeals')renderEditMeals();
+    else if(name==='history')renderHistory();
+}
+
+function calcDayProgress(dateKey,dayIdx){
+    const plan=getWorkoutPlan(),exercises=plan[dayIdx]||[];
+    const wDone=getWorkoutDone()[dateKey]||{};
+    let tS=0,dS=0;
+    exercises.forEach((ex,i)=>{
+        if(ex.type==='cardio'){tS+=1;if(wDone[i]&&wDone[i][0])dS+=1}
+        else{tS+=ex.sets;const a=wDone[i]||[];dS+=a.filter(Boolean).length}
+    });
+    const mPlan=getMealsPlan(),mDone=getMealsDone()[dateKey]||{};
+    let tM=0,dM=0;
+    MEAL_TYPES.forEach(mt=>{const items=mPlan[mt.key]||[];tM+=items.length;
+        const a=mDone[mt.key]||[];dM+=a.filter(Boolean).length});
+    return{tS,dS,tM,dM,wPct:tS>0?Math.round(dS/tS*100):0,mPct:tM>0?Math.round(dM/tM*100):0,
+        totalPct:(tS+tM)>0?Math.round((dS+dM)/(tS+tM)*100):0,hasData:dS>0||dM>0}
+}
+
+function renderHome(){
+    const now=new Date(),dayIdx=getToday();
+    const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+    document.getElementById('homeDate').textContent=now.toLocaleDateString('he-IL',opts);
+    const h=now.getHours();
+    let g='ערב טוב! 🌙';
+    if(h<12)g='בוקר טוב! ☀️';else if(h<17)g='צהריים טובים! 🌤';
+    else if(h<21)g='אחר צהריים טובים! 🌇';
+    document.getElementById('homeGreeting').textContent=g;
+
+    const todayKey=getTodayKey();
+    const p=calcDayProgress(todayKey,dayIdx);
+
+    document.getElementById('workoutProgress').style.width=p.wPct+'%';
+    document.getElementById('workoutProgressText').textContent=p.wPct+'%';
+    const plan=getWorkoutPlan(),todayEx=plan[dayIdx]||[];
+    document.getElementById('workoutSubtitle').textContent=
+        todayEx.length===0?'יום מנוחה 😴':todayEx.length+' תרגילים · '+p.dS+'/'+p.tS+' סטים';
+
+    document.getElementById('mealsProgress').style.width=p.mPct+'%';
+    document.getElementById('mealsProgressText').textContent=p.mPct+'%';
+    document.getElementById('mealsSubtitle').textContent=
+        p.tM===0?'אין תפריט מוגדר':p.dM+'/'+p.tM+' ארוחות בוצעו';
+}
+
+function renderWorkout(){
+    const dayIdx=getToday();
+    document.getElementById('workoutDayName').textContent='יום '+getDayName(dayIdx);
+    const plan=getWorkoutPlan(),exercises=plan[dayIdx]||[];
+    const container=document.getElementById('exerciseList');
+    if(exercises.length===0){
+        container.innerHTML='<div class="rest-day"><span class="rest-icon">😴</span>'+
+            '<h3>יום מנוחה</h3><p>נתראה מחר באימון!</p><br>'+
+            '<button class="save-btn" style="width:auto;display:inline-block;margin:0;'+
+            'padding:12px 28px;font-size:15px" onclick="showScreen(\'editWorkout\')">'+
+            '✏️ ערוך תוכנית</button></div>';return;
+    }
+    const todayKey=getTodayKey(),wDone=getWorkoutDone(),todayWDone=wDone[todayKey]||{};
+    let html='';
+    exercises.forEach((ex,exIdx)=>{
+        if(ex.type==='cardio'){
+            const isDone=todayWDone[exIdx]&&todayWDone[exIdx][0];
+            html+='<div class="cardio-card '+(isDone?'all-done':'')+'">'+
+                '<div class="cardio-header"><div class="cardio-name">🏃 '+esc(ex.name)+
+                '</div><div class="cardio-duration">'+esc(ex.reps)+'</div></div>'+
+                '<button class="cardio-toggle '+(isDone?'done':'')+
+                '" onclick="toggleCardio('+exIdx+')">'+(isDone?'✓ בוצע!':'סמן כבוצע')+
+                '</button></div>';
+        }else{
+            const setsDone=todayWDone[exIdx]||new Array(ex.sets).fill(false);
+            while(setsDone.length<ex.sets)setsDone.push(false);
+            const allDone=setsDone.slice(0,ex.sets).every(Boolean);
+            const ws=ex.weight?ex.weight+' ק"ג':'';
+            html+='<div class="exercise-card '+(allDone?'all-done':'')+'">'+
+                '<div class="exercise-header"><div class="exercise-name">'+esc(ex.name)+'</div>'+
+                (ws?'<div class="exercise-weight">⚖️ '+esc(ws)+'</div>':'')+
+                '</div><div class="exercise-info">'+ex.sets+' סטים × '+esc(ex.reps)+
+                ' חזרות</div><div class="exercise-sets">';
+            for(let s=0;s<ex.sets;s++){
+                html+='<button class="set-btn '+(setsDone[s]?'done':'')+
+                    '" onclick="toggleSet('+exIdx+','+s+','+ex.sets+')"><span>'+(s+1)+
+                    '</span></button>';}
+            html+='</div></div>';
+        }
+    });
+    container.innerHTML=html;
+}
+
+function toggleSet(exIdx,setIdx,totalSets){
+    const k=getTodayKey(),w=getWorkoutDone();
+    if(!w[k])w[k]={};if(!w[k][exIdx])w[k][exIdx]=new Array(totalSets).fill(false);
+    while(w[k][exIdx].length<totalSets)w[k][exIdx].push(false);
+    w[k][exIdx][setIdx]=!w[k][exIdx][setIdx];setWorkoutDone(w);renderWorkout();
+}
+function toggleCardio(exIdx){
+    const k=getTodayKey(),w=getWorkoutDone();
+    if(!w[k])w[k]={};if(!w[k][exIdx])w[k][exIdx]=[false];
+    w[k][exIdx][0]=!w[k][exIdx][0];setWorkoutDone(w);renderWorkout();
+}
+function renderMeals(){
+    const mPlan=getMealsPlan(),todayKey=getTodayKey();
+    const mDone=getMealsDone(),todayMDone=mDone[todayKey]||{};
+    const container=document.getElementById('mealsList');
+    let hasAny=false,html='',animIdx=0;
+    MEAL_TYPES.forEach(mt=>{
+        const items=mPlan[mt.key]||[];
+        if(items.length===0)return;
+        hasAny=true;
+        const doneArr=todayMDone[mt.key]||new Array(items.length).fill(false);
+        html+='<div class="meal-section"><div class="meal-section-title">'+
+            mt.icon+' '+esc(mt.name)+'</div><div class="meal-items">';
+        items.forEach((item,idx)=>{
+            const isDone=doneArr[idx]||false;
+            const timeStr=item.time||'';
+            html+='<div class="meal-item '+(isDone?'done':'')+
+                '" onclick="toggleMeal(\''+mt.key+'\','+idx+','+items.length+
+                ')" style="animation-delay:'+animIdx*0.05+'s">'+
+                '<div class="meal-checkbox"></div><div class="meal-text">'+
+                esc(item.text)+'</div>'+(timeStr?'<div class="meal-time">'+
+                esc(timeStr)+'</div>':'')+'</div>';
+            animIdx++;
+        });
+        html+='</div></div>';
+    });
+    if(!hasAny){
+        html='<div class="rest-day"><span class="rest-icon">🍽️</span>'+
+            '<h3>אין תפריט מוגדר</h3><p>הוסף ארוחות כדי לעקוב</p><br>'+
+            '<button class="save-btn" style="width:auto;display:inline-block;margin:0;'+
+            'padding:12px 28px;font-size:15px" onclick="showScreen(\'editMeals\')">'+
+            '➕ הוסף תפריט</button></div>';
+    }
+    container.innerHTML=html;
+}
+
+function toggleMeal(typeKey,idx,total){
+    const k=getTodayKey(),m=getMealsDone();
+    if(!m[k])m[k]={};if(!m[k][typeKey])m[k][typeKey]=new Array(total).fill(false);
+    while(m[k][typeKey].length<total)m[k][typeKey].push(false);
+    m[k][typeKey][idx]=!m[k][typeKey][idx];setMealsDone(m);renderMeals();
+}
+
+let editingDay=0;
+function renderEditWorkout(){
+    editingDay=getToday();renderEditWorkoutTabs();renderEditWorkoutFields();
+}
+function renderEditWorkoutTabs(){
+    let html='';
+    DAYS.forEach((name,idx)=>{
+        html+='<div class="day-tab '+(idx===editingDay?'active':'')+
+            '" onclick="switchEditDay('+idx+')">'+name+'</div>';
+    });
+    document.getElementById('editWorkoutTabs').innerHTML=html;
+}
+function switchEditDay(idx){editingDay=idx;renderEditWorkoutTabs();renderEditWorkoutFields()}
+
+function renderEditWorkoutFields(){
+    const plan=getWorkoutPlan(),exercises=plan[editingDay]||[];
+    const container=document.getElementById('editWorkoutContainer');
+    let html='';
+    if(exercises.length===0){
+        html+='<div style="text-align:center;padding:20px;color:var(--text-muted)">'+
+            '<p>אין תרגילים ליום '+getDayName(editingDay)+'</p></div>';
+    }
+    exercises.forEach((ex,idx)=>{
+        html+='<div class="edit-item">'+
+            '<input type="text" value="'+esc(ex.name)+'" placeholder="שם תרגיל" '+
+            'class="ex-name-input" data-idx="'+idx+'">'+
+            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
+            '<div style="text-align:center"><div class="input-label">סטים</div>'+
+            '<input type="number" class="small-input ex-sets-input" value="'+ex.sets+
+            '" min="1" max="20" data-idx="'+idx+'"></div>'+
+            '<div style="text-align:center"><div class="input-label">חזרות</div>'+
+            '<input type="text" class="small-input ex-reps-input" value="'+esc(ex.reps)+
+            '" data-idx="'+idx+'" style="width:70px"></div>'+
+            '<div style="text-align:center"><div class="input-label">משקל</div>'+
+            '<input type="text" class="weight-input ex-weight-input" value="'+
+            esc(ex.weight||'')+'" placeholder="ק״ג" data-idx="'+idx+'"></div>'+
+            '<div style="text-align:center"><div class="input-label">סוג</div>'+
+            '<select class="small-input ex-type-input" data-idx="'+idx+
+            '" style="width:70px;appearance:auto">'+
+            '<option value="exercise" '+(ex.type==='exercise'?'selected':'')+'>תרגיל</option>'+
+            '<option value="cardio" '+(ex.type==='cardio'?'selected':'')+'>אירובי</option>'+
+            '</select></div></div>'+
+            '<button class="delete-btn" onclick="removeExerciseField('+idx+')">🗑</button></div>';
+    });
+    container.innerHTML=html;
+}
+
+function addExerciseField(){
+    const plan=getWorkoutPlan();
+    if(!plan[editingDay])plan[editingDay]=[];
+    plan[editingDay].push({name:'',sets:3,reps:'10',type:'exercise',weight:''});
+    setWorkoutPlan(plan);renderEditWorkoutFields();
+    setTimeout(()=>{const inp=document.querySelectorAll('.ex-name-input');
+        if(inp.length>0)inp[inp.length-1].focus()},100);
+}
+function removeExerciseField(idx){
+    const plan=getWorkoutPlan();
+    if(plan[editingDay]){plan[editingDay].splice(idx,1);setWorkoutPlan(plan);renderEditWorkoutFields()}
+}
+function saveWorkoutPlan(){
+    const plan=getWorkoutPlan();
+    const names=document.querySelectorAll('.ex-name-input');
+    const sets=document.querySelectorAll('.ex-sets-input');
+    const reps=document.querySelectorAll('.ex-reps-input');
+    const weights=document.querySelectorAll('.ex-weight-input');
+    const types=document.querySelectorAll('.ex-type-input');
+    const exercises=[];
+    names.forEach((inp,i)=>{const name=inp.value.trim();
+        if(name)exercises.push({name,sets:Math.max(1,Math.min(20,parseInt(sets[i].value)||3)),
+            reps:reps[i].value.trim()||'10',weight:weights[i].value.trim(),type:types[i].value});
+    });
+    plan[editingDay]=exercises;setWorkoutPlan(plan);
+    showToast('✅ תוכנית האימון נשמרה!');showScreen('workout');
+}
+
+function renderEditMeals(){
+    const plan=getMealsPlan(),container=document.getElementById('editMealsContainer');
+    let html='';
+    MEAL_TYPES.forEach(mt=>{
+        const items=plan[mt.key]||[];
+        html+='<div class="meal-type-header">'+mt.icon+' '+esc(mt.name)+'</div>';
+        items.forEach((item,idx)=>{
+            html+='<div class="meal-edit-item"><input type="text" value="'+esc(item.text)+
+                '" placeholder="פריט מזון" class="meal-input" data-type="'+mt.key+
+                '" data-idx="'+idx+'"><input type="text" class="time-input meal-time-input" value="'+
+                esc(item.time||'')+'" placeholder="שעה" data-type="'+mt.key+'" data-idx="'+idx+
+                '"><button class="delete-btn" onclick="removeMealItem(\''+mt.key+'\','+idx+
+                ')">🗑</button></div>';
+        });
+        html+='<button class="add-btn" onclick="addMealItem(\''+mt.key+
+            '\')" style="margin-bottom:12px">+ הוסף פריט ל'+esc(mt.name)+'</button>';
+    });
+    container.innerHTML=html;
+}
+function addMealItem(typeKey){
+    const plan=getMealsPlan();if(!plan[typeKey])plan[typeKey]=[];
+    plan[typeKey].push({text:'',time:''});setMealsPlan(plan);renderEditMeals();
+    setTimeout(()=>{const inp=document.querySelectorAll('.meal-input[data-type="'+typeKey+'"]');
+        if(inp.length>0)inp[inp.length-1].focus()},100);
+}
+function removeMealItem(typeKey,idx){
+    const plan=getMealsPlan();
+    if(plan[typeKey]){plan[typeKey].splice(idx,1);setMealsPlan(plan);renderEditMeals()}
+}
+function saveMealsPlan(){
+    const plan={};
+    MEAL_TYPES.forEach(mt=>{
+        const texts=document.querySelectorAll('.meal-input[data-type="'+mt.key+'"]');
+        const times=document.querySelectorAll('.meal-time-input[data-type="'+mt.key+'"]');
+        const items=[];
+        texts.forEach((inp,i)=>{const val=inp.value.trim();
+            if(val)items.push({text:val,time:times[i].value.trim()})});
+        if(items.length>0)plan[mt.key]=items;
+    });
+    setMealsPlan(plan);showToast('✅ תפריט הארוחות נשמר!');showScreen('meals');
+}
+// ========== HISTORY CALENDAR ==========
+let calYear,calMonth,selectedDateKey=null;
+
+function renderHistory(){
+    const now=new Date();
+    calYear=now.getFullYear();calMonth=now.getMonth();
+    selectedDateKey=getTodayKey();
+    renderCalendar();
+    renderHistoryDetail();
+}
+
+function changeCalMonth(delta){
+    calMonth+=delta;
+    if(calMonth>11){calMonth=0;calYear++}
+    if(calMonth<0){calMonth=11;calYear--}
+    const now=new Date();
+    if(calYear>now.getFullYear()||(calYear===now.getFullYear()&&calMonth>now.getMonth())){
+        calYear=now.getFullYear();calMonth=now.getMonth();}
+    renderCalendar();
+}
+
+function renderCalendar(){
+    const monthNames=['ינואר','פברואר','מרץ','אפריל','מאי','יוני',
+        'יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    document.getElementById('calMonthText').textContent=monthNames[calMonth]+' '+calYear;
+
+    const firstDay=new Date(calYear,calMonth,1).getDay();
+    const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+    const today=new Date();
+    const todayStr=today.toISOString().split('T')[0];
+    const dayNames=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+
+    let html='';
+    dayNames.forEach(d=>{html+='<div class="cal-day-name">'+d+'</div>'});
+
+    for(let i=0;i<firstDay;i++){html+='<div class="cal-day empty"></div>'}
+
+    for(let d=1;d<=daysInMonth;d++){
+        const dateObj=new Date(calYear,calMonth,d);
+        const dateKey=dateObj.toISOString().split('T')[0];
+        const dayIdx=dateObj.getDay();
+        const isFuture=dateObj>today;
+        const isToday=dateKey===todayStr;
+        const isSelected=dateKey===selectedDateKey;
+        const prog=calcDayProgress(dateKey,dayIdx);
+
+        let cls='cal-day';
+        if(isFuture)cls+=' future';
+        if(isToday)cls+=' today';
+        if(isSelected)cls+=' selected';
+        if(prog.hasData)cls+=' has-data';
+
+        if(isFuture){
+            html+='<div class="'+cls+'">'+d+'</div>';
+        }else{
+            html+='<div class="'+cls+'" onclick="selectDate(\''+dateKey+'\')">'+d+'</div>';
+        }
+    }
+    document.getElementById('calGrid').innerHTML=html;
+}
+
+function selectDate(dateKey){
+    selectedDateKey=dateKey;
+    renderCalendar();
+    renderHistoryDetail();
+}
+
+function renderHistoryDetail(){
+    if(!selectedDateKey)return;
+    const dateObj=new Date(selectedDateKey+'T12:00:00');
+    const dayIdx=dateObj.getDay();
+    const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+    document.getElementById('selectedDateTitle').textContent=
+        dateObj.toLocaleDateString('he-IL',opts);
+
+    const p=calcDayProgress(selectedDateKey,dayIdx);
+
+    const summaryEl=document.getElementById('historySummary');
+    summaryEl.style.display='flex';
+    summaryEl.innerHTML=
+        '<div class="summary-item summary-workout"><div class="summary-value">'+
+        p.wPct+'%</div><div class="summary-label">אימון</div></div>'+
+        '<div class="summary-item summary-meals"><div class="summary-value">'+
+        p.mPct+'%</div><div class="summary-label">ארוחות</div></div>'+
+        '<div class="summary-item summary-total"><div class="summary-value">'+
+        p.totalPct+'%</div><div class="summary-label">סה״כ</div></div>';
+
+    const plan=getWorkoutPlan(),exercises=plan[dayIdx]||[];
+    const wDone=getWorkoutDone()[selectedDateKey]||{};
+    const mPlan=getMealsPlan(),mDone=getMealsDone()[selectedDateKey]||{};
+
+    let html='<div class="history-section"><div class="history-section-title">'+
+        '🏋️ אימון - יום '+getDayName(dayIdx)+'</div>';
+
+    if(exercises.length===0){
+        html+='<div class="history-empty">😴 יום מנוחה</div>';
+    }else{
+        exercises.forEach((ex,i)=>{
+            let status='none',statusText='לא בוצע';
+            if(ex.type==='cardio'){
+                if(wDone[i]&&wDone[i][0]){status='complete';statusText='בוצע ✓'}
+            }else{
+                const a=wDone[i]||[];const done=a.filter(Boolean).length;
+                if(done===ex.sets){status='complete';statusText='הושלם ✓'}
+                else if(done>0){status='partial';statusText=done+'/'+ex.sets+' סטים'}
+            }
+            html+='<div class="history-item"><div class="history-item-name">'+
+                esc(ex.name)+'</div><div class="history-item-status '+status+'">'+
+                statusText+'</div></div>';
+        });
+    }
+    html+='</div>';
+
+    html+='<div class="history-section"><div class="history-section-title">🥗 ארוחות</div>';
+    let hasMeals=false;
+    MEAL_TYPES.forEach(mt=>{
+        const items=mPlan[mt.key]||[];
+        if(items.length===0)return;
+        hasMeals=true;
+        const doneArr=mDone[mt.key]||[];
+        items.forEach((item,idx)=>{
+            const isDone=doneArr[idx]||false;
+            const status=isDone?'complete':'none';
+            const statusText=isDone?'בוצע ✓':'לא בוצע';
+            html+='<div class="history-item"><div class="history-item-name">'+
+                mt.icon+' '+esc(item.text)+'</div><div class="history-item-status '+
+                status+'">'+statusText+'</div></div>';
+        });
+    });
+    if(!hasMeals)html+='<div class="history-empty">אין תפריט מוגדר</div>';
+    html+='</div>';
+
+    document.getElementById('historyContent').innerHTML=html;
+}
+
+// ========== RESET + UTILS ==========
+let resetTarget='';
+function confirmReset(target){
+    resetTarget=target;
+    document.getElementById('confirmModal').classList.add('show');
+    document.getElementById('confirmResetBtn').onclick=()=>{executeReset();closeModal()};
+}
+function closeModal(){document.getElementById('confirmModal').classList.remove('show')}
+function executeReset(){
+    const k=getTodayKey();
+    if(resetTarget==='workout'){
+        const w=getWorkoutDone();delete w[k];setWorkoutDone(w);
+        showToast('🔄 סימוני האימון אופסו');renderWorkout();
+    }else if(resetTarget==='meals'){
+        const m=getMealsDone();delete m[k];setMealsDone(m);
+        showToast('🔄 סימוני הארוחות אופסו');renderMeals();
+    }
+}
+
+function showToast(msg){
+    const toast=document.getElementById('toast');
+    toast.textContent=msg;toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2500);
+}
+function esc(str){
+    if(!str)return '';
+    const div=document.createElement('div');div.textContent=str;return div.innerHTML;
+}
+function cleanOldData(){
+    const cutoff=new Date(Date.now()-90*24*60*60*1000).toISOString().split('T')[0];
+    ['wd4','md4'].forEach(key=>{
+        const data=loadData(key,{});let changed=false;
+        Object.keys(data).forEach(dk=>{if(dk<cutoff){delete data[dk];changed=true}});
+        if(changed)saveData(key,data);
+    });
+}
+
+cleanOldData();
+renderHome();
+</script>
+</body>
+</html>
